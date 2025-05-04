@@ -10,18 +10,16 @@ import SwiftUI
 struct CarouselView: View {
     @StateObject private var viewModel = CarouselViewModel()
     @State private var currentIndex: Int = 0
-    @State private var finalOffset: CGFloat = 0
     @State private var dragOffset: CGFloat = 0
-
-    private let imageWidth: CGFloat = 250
     private let spacing: CGFloat = -35
 
     var body: some View {
-        VStack {
-            GeometryReader { proxy in
-                let screenWidth = proxy.size.width
-                let totalCardWidth = imageWidth + spacing
+        GeometryReader { proxy in
+            let screenWidth = proxy.size.width
+            let imageSize = proxy.size.height
+            let totalCardWidth = imageSize + spacing
 
+            VStack {
                 ZStack {
                     ForEach(viewModel.destinations.indices, id: \.self) { index in
                         let relativeIndex = CGFloat(index - currentIndex)
@@ -30,33 +28,29 @@ struct CarouselView: View {
                         let scale = max(0.85, 1.0 - abs(finalIndex) * 0.15)
                         let zIndex = Double(100 - abs(finalIndex) * 10)
 
-                        VStack {
-                            Image(viewModel.destinations[index].imageName)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: imageWidth, height: imageWidth)
-                                .cornerRadius(25)
-                                .clipped()
-                        }
-                        .scaleEffect(scale)
-                        .offset(x: offsetX)
-                        .zIndex(zIndex)
-                        .animation(.easeInOut(duration: 0.25), value: dragOffset)
+                        Image(viewModel.destinations[index].imageName)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: imageSize, height: imageSize)
+                            .cornerRadius(25)
+                            .clipped()
+                            .scaleEffect(scale)
+                            .offset(x: offsetX)
+                            .zIndex(zIndex)
+                            .animation(.easeInOut(duration: 0.25), value: dragOffset)
                     }
                 }
-                .frame(width: screenWidth, height: 250)
-                .clipped()
+                .frame(width: screenWidth, height: imageSize)
                 .gesture(
                     DragGesture()
                         .onChanged { value in
                             dragOffset = value.translation.width
                         }
                         .onEnded { value in
-                            let predictedTranslation = value.predictedEndTranslation.width
-                            let predictedIndexOffset = -predictedTranslation / totalCardWidth
+                            let totalCardWidth = imageSize + spacing
+                            let predictedIndexOffset = -value.predictedEndTranslation.width / totalCardWidth
                             let newIndex = CGFloat(currentIndex) + predictedIndexOffset
-                            let targetIndex = Int(round(newIndex))
-                            let clampedIndex = min(max(targetIndex, 0), viewModel.destinations.count - 1)
+                            let clampedIndex = min(max(Int(round(newIndex)), 0), viewModel.destinations.count - 1)
 
                             withAnimation(.spring()) {
                                 currentIndex = clampedIndex
@@ -64,18 +58,17 @@ struct CarouselView: View {
                             }
                         }
                 )
-            }
-            .frame(height: 250)
 
-            HStack(spacing: 10) {
-                ForEach(viewModel.destinations.indices, id: \.self) { index in
-                    Circle()
-                        .fill(index == currentIndex ? Color.primary : Color.secondary.opacity(0.3))
-                        .frame(width: 10, height: 10)
-                        .animation(.easeInOut(duration: 0.25), value: currentIndex)
+                HStack(spacing: 10) {
+                    ForEach(viewModel.destinations.indices, id: \.self) { index in
+                        Circle()
+                            .fill(index == currentIndex ? Color.primary : Color.secondary.opacity(0.3))
+                            .frame(width: 10, height: 10)
+                            .animation(.easeInOut(duration: 0.25), value: currentIndex)
+                    }
                 }
             }
-            .padding(.top, 8)
+            .frame(maxHeight: .infinity)
         }
         .onAppear {
             if !viewModel.destinations.isEmpty {
@@ -83,8 +76,4 @@ struct CarouselView: View {
             }
         }
     }
-}
-
-#Preview {
-    CarouselView()
 }
